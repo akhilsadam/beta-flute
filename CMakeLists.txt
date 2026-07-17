@@ -41,6 +41,9 @@ juce_add_plugin(QGWavetableVST
     AU_MAIN_TYPE "kAudioUnitType_MusicDevice"
 )
 
+# Generate JuceHeader.h
+juce_generate_juce_header(QGWavetableVST)
+
 # Add sources - do NOT include headers, only .cpp files
 target_sources(QGWavetableVST PRIVATE
     juce/QGWavetableProcessor.cpp
