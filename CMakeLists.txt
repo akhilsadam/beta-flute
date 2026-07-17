@@ -10,6 +10,11 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
+# Disable VST2 support BEFORE fetching JUCE (requires Steinberg VST2 SDK)
+set(JUCE_PLUGINHOST_VST OFF CACHE BOOL "" FORCE)
+set(JUCE_VST2_LOCATION "" CACHE STRING "" FORCE)
+set(JUCE_BUILD_HELPER_TOOLS OFF CACHE BOOL "" FORCE)
+
 # Fetch JUCE
 include(FetchContent)
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
@@ -20,10 +25,6 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(JUCE)
-
-# Disable VST2 support (requires additional SDK)
-set(JUCE_PLUGINHOST_VST OFF CACHE BOOL "" FORCE)
-set(JUCE_VST2_LOCATION "" CACHE STRING "" FORCE)
 
 # Determine plugin format based on OS
 if(WIN32)
