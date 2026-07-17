@@ -22,7 +22,7 @@ echo "=========================================="
 # matches the pattern as the SDK root.
 # -------------------------------------------------------------------------------
 SDK_ZIP="VST3_SDK.zip"
-SDK_URL="https://developer.steinberg.press/downloads/sdk/VST3_SDK.zip"
+SDK_URL="https://www.steinberg.net/vst3sdk"
 VST_SDK_ROOT=""
 
 # Check if a known SDK folder already exists (e.g. VST3_SDK-*)
