@@ -29,7 +29,7 @@ if not "%~1"=="" (
 
 REM 3) If still empty, fall back to automatic download
 if not defined JUCE_VST3_SDK_PATH (
-    echo [*] VST3 SDK not found – attempting download...
+    echo [*] VST3 SDK not found, attempting download...
     echo     Target URL: %SDK_URL%
     echo.
 
@@ -44,12 +44,12 @@ if not defined JUCE_VST3_SDK_PATH (
         echo Please visit %SDK_URL% in a browser, accept Steinberg's licence,
         echo download the ZIP manually, extract it, and place the folder at:
         echo     %~dp0..\vst3-sdk
-        echo Then re‑run this script, optionally passing the folder path as an argument.
+        echo Then rerun this script, optionally passing the folder path as an argument.
         pause
         exit /b 1
     )
 
-    echo [*] Downloaded VST3_SDK.zip – extracting now...
+    echo [*] Downloaded VST3_SDK.zip, extracting now...
     powershell -NoProfile -Command ^
         "Expand-Archive -Path 'VST3_SDK.zip' -DestinationPath '.' -Force" ^
         2>nul
