@@ -27,7 +27,7 @@ FetchContent_MakeAvailable(JUCE)
 
 # Determine plugin format based on OS
 if(WIN32)
-    set(PLUGIN_FORMATS VST VST3)
+    set(PLUGIN_FORMATS VST3)
 elseif(APPLE)
     set(PLUGIN_FORMATS VST3 AU)
 else()
@@ -37,8 +37,8 @@ endif()
 # Create VST3/AU plugin
 juce_add_plugin(QGWavetableVST
     PRODUCT_NAME "QG Wavetable"
-    COMPANY_NAME "Akhil"
-    PLUGIN_MANUFACTURER_CODE "AKHM"
+    COMPANY_NAME "YZKA"
+    PLUGIN_MANUFACTURER_CODE "YZKA"
     PLUGIN_CODE "QGWV"
     FORMATS ${PLUGIN_FORMATS}
     VST3_CATEGORIES "Instrument" "Synth"
