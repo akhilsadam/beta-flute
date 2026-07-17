@@ -8,12 +8,16 @@
 
 #ifdef _WIN32
     #include <winsock2.h>
+    #include <processthreadsapi.h>
+    #include <handleapi.h>
     #pragma comment(lib, "ws2_32.lib")
     typedef int socklen_t;
 #else
     #include <sys/socket.h>
     #include <sys/un.h>
     #include <unistd.h>
+    #include <signal.h>
+    #include <sys/types.h>
 #endif
 #include <cstdlib>
 #include <cstdio>
@@ -74,8 +78,13 @@ private:
 class QGServerProcess
 {
 public:
-    QGServerProcess() : serverPid(-1), startupDelay(0)
+    QGServerProcess() : startupDelay(0)
     {
+        #ifdef _WIN32
+            hProcess = NULL;
+        #else
+            serverPid = -1;
+        #endif
     }
 
     ~QGServerProcess()
@@ -101,62 +110,110 @@ public:
             return false;
         }
 
-        for (const char* pythonCmd : pythonPaths)
-        {
-            if (tryLaunchServer(pythonCmd, scriptFile))
+        #ifdef _WIN32
+            return tryLaunchServerWindows(scriptFile);
+        #else
+            for (const char* pythonCmd : pythonPaths)
             {
-                DBG("QG server started successfully");
-                startupDelay = 2000;  // Wait 2s for server to bind socket
-                return true;
+                if (tryLaunchServerUnix(pythonCmd, scriptFile))
+                {
+                    DBG("QG server started successfully");
+                    startupDelay = 2000;
+                    return true;
+                }
             }
-        }
-
-        DBG("Could not find Python installation");
-        return false;
+            DBG("Could not find Python installation");
+            return false;
+        #endif
     }
 
     void stop()
     {
-        if (serverPid > 0)
-        {
-            kill(serverPid, SIGTERM);
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            kill(serverPid, SIGKILL);
-            serverPid = -1;
-        }
+        #ifdef _WIN32
+            if (hProcess != NULL)
+            {
+                TerminateProcess(hProcess, 1);
+                CloseHandle(hProcess);
+                hProcess = NULL;
+            }
+        #else
+            if (serverPid > 0)
+            {
+                kill(serverPid, SIGTERM);
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                kill(serverPid, SIGKILL);
+                serverPid = -1;
+            }
+        #endif
     }
 
-    bool isRunning() const { return serverPid > 0; }
+    bool isRunning() const
+    {
+        #ifdef _WIN32
+            return hProcess != NULL;
+        #else
+            return serverPid > 0;
+        #endif
+    }
+
     int getStartupDelay() const { return startupDelay; }
 
 private:
-    bool tryLaunchServer(const char* pythonCmd, const juce::File& scriptFile)
-    {
-        std::string cmd = std::string(pythonCmd) + " \"" + scriptFile.getFullPathName().toStdString()
-                         + "\" --device cpu 2>/dev/null &";
-
-        int result = system(cmd.c_str());
-        if (result == 0)
+    #ifdef _WIN32
+        bool tryLaunchServerWindows(const juce::File& scriptFile)
         {
-            // Crude: just check if process likely started
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            serverPid = 1;  // Placeholder (proper way would use posix_spawn)
+            std::string pythonExe = "python";
+            std::string script = scriptFile.getFullPathName().toStdString();
+            std::string cmdLine = pythonExe + " \"" + script + "\" --device cpu 2>nul";
+
+            STARTUPINFOA si;
+            PROCESS_INFORMATION pi;
+            ZeroMemory(&si, sizeof(si));
+            si.cb = sizeof(si);
+            si.dwFlags = STARTF_USESHOWWINDOW;
+            si.wShowWindow = SW_HIDE;
+
+            if (!CreateProcessA(NULL, (LPSTR)cmdLine.c_str(), NULL, NULL, FALSE,
+                               CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+            {
+                return false;
+            }
+
+            hProcess = pi.hProcess;
+            CloseHandle(pi.hThread);
+            startupDelay = 2000;
             return true;
         }
-        return false;
-    }
+    #else
+        bool tryLaunchServerUnix(const char* pythonCmd, const juce::File& scriptFile)
+        {
+            std::string cmd = std::string(pythonCmd) + " \"" + scriptFile.getFullPathName().toStdString()
+                             + "\" --device cpu 2>/dev/null &";
+
+            int result = system(cmd.c_str());
+            if (result == 0)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                serverPid = 1;
+                return true;
+            }
+            return false;
+        }
+    #endif
 
     juce::File getServerScriptPath()
     {
-        // Try relative to plugin bundle / app resources
         juce::File pluginDir = juce::File::getSpecialLocation(juce::File::currentExecutableFile).getParentDirectory();
 
-        // Try several common locations
         std::vector<juce::File> candidates = {
             pluginDir.getChildFile("qg_wavetable_server.py"),
             pluginDir.getParentDirectory().getChildFile("qg_wavetable_server.py"),
             juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("qg_wavetable_server.py"),
-            juce::File("/tmp/qg_wavetable_server.py"),
+            #ifdef _WIN32
+                juce::File("C:\\Temp\\qg_wavetable_server.py"),
+            #else
+                juce::File("/tmp/qg_wavetable_server.py"),
+            #endif
         };
 
         for (const auto& candidate : candidates)
@@ -168,7 +225,11 @@ private:
         return juce::File();
     }
 
-    pid_t serverPid;
+    #ifdef _WIN32
+        HANDLE hProcess;
+    #else
+        pid_t serverPid;
+    #endif
     int startupDelay;
 };
 
