@@ -34,6 +34,9 @@ else()
     set(PLUGIN_FORMATS VST3)
 endif()
 
+set(JUCE_DISABLE_VST2 TRUE CACHE BOOL "Disable VST2 support"
+FORCE)
+
 # Create VST3/AU plugin
 juce_add_plugin(QGWavetableVST
     PRODUCT_NAME "QG Wavetable"
