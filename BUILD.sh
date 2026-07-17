@@ -15,19 +15,19 @@
   # 1️  Locate (or download) the VST SDK
   # --------------------------------------------------------------  -----------------                                               
   # The SDK is expected to be a folder whose name starts with 
-  "VST3_SDK" (or
+#   "VST3_SDK" (or
   # "VST_SDK") inside the parent directory of this script. If such  a folder is                                                     
   # missing we download the official SDK ZIP, unzip it, and use 
-  the first matching
+#   the first matching
   # folder as the SDK root.
   # --------------------------------------------------------------  -----------------
   SDK_ZIP="VST3_SDK.zip"
   # Direct link to the official SDK zip – works without a manual 
-  “accept licence”                                                
+#   “accept licence”                                                
   SDK_URL="https://developer.steinberg.press/downloads/sdk/VST3_SD  K.zip"
 
   # Look for an existing SDK folder (e.g. VST3_SDK-<ver> or 
-  VST_SDK)
+#   VST_SDK)
   VST_SDK_ROOT=""
 
   # Check the parent directory for any folder that looks like the   SDK
