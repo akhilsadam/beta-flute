@@ -54,7 +54,7 @@ if [[ -z "$VST_SDK_ROOT" ]]; then
 fi
 
 # Export the path so JUCE can see it
-export JUCE_VST2_SDK_PATH="${VST_SDK_ROOT}"
+export JUCE_VST3_SDK_PATH="${VST_SDK_ROOT}"
 echo "✓ VST SDK path set for CMake: $VST_SDK_ROOT"
 
 # -------------------------------------------------------------------------------

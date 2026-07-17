@@ -31,8 +31,10 @@ if(WIN32)
 elseif(APPLE)
     set(PLUGIN_FORMATS VST3 AU)
 else()
-    set(PLUGIN_FORMATS VST VST3)
+    set(PLUGIN_FORMATS VST3)
 endif()
+
+juce_set_vst_sdk_path(${JUCE_VST3_SDK_PATH})
 
 # Create VST3/AU plugin
 juce_add_plugin(QGWavetableVST
