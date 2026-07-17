@@ -21,9 +21,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
-# Add JUCE to the project
-add_subdirectory(${juce_SOURCE_DIR} ${CMAKE_BINARY_DIR}/JUCE)
-
 # Determine plugin format based on OS
 if(WIN32)
     set(PLUGIN_FORMATS VST3)
