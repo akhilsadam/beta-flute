@@ -10,19 +10,13 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
-# Fetch VST2 SDK (required for VST2 plugin format)
-include(FetchContent)
-set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
-
-FetchContent_Declare(
-    VST2_SDK
-    URL https://github.com/steinbergmedia/vst2sdk/archive/refs/heads/master.zip
-    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
-)
-FetchContent_MakeAvailable(VST2_SDK)
-set(JUCE_VST2_SDK_LOCATION "${vst2_sdk_SOURCE_DIR}" CACHE PATH "VST2 SDK location" FORCE)
+# Optional: VST2 SDK location (if user has it installed)
+# To add VST2 support, set this to your VST2 SDK path:
+# set(JUCE_VST2_SDK_LOCATION "C:/path/to/vst2sdk" CACHE PATH "VST2 SDK location" FORCE)
 
 # Fetch JUCE
+include(FetchContent)
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
