@@ -56,7 +56,7 @@ if [[ -z "$VST_SDK_ROOT" ]]; then
     fi
 
     # Extract – the archive creates a folder that starts with VST3_SDK
-    unzip -q "$SDK_ZIP" -D .
+    unzip -q $SDK_ZIP -D .
     extracted_dir=$(find . -maxdepth 1 -type d -name "VST3_SDK*" | head -n1)
     if [[ -z "$extracted_dir" ]]; then
         echo "❌ Extraction did not produce a VST3_SDK* folder."
