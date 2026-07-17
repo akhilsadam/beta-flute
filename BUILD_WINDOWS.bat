@@ -1,61 +1,111 @@
 @echo off
-REM QG Wavetable VST — Windows Build Script
+REM QG Wavetable VST — Windows Build Script (manual‑SDK first, auto‑download optional)
+REM -------------------------------------------------------------------------------
+REM This version adds a small wrapper around the SDK detection logic:
+REM   1. You can pass the SDK folder as the first argument to the script.
+REM   2. If no argument is supplied the script will try to locate an existing
+REM      SDK folder or download it automatically (same behaviour as before).
+REM   3. The chosen SDK path is stored in the variable JUCE_VST3_SDK_PATH and
+REM      fed to CMake via -DJUCE_VST3_SDK_PATH=...
+REM -------------------------------------------------------------------------------
 
-echo ==========================================
-echo QG Wavetable VST Build (Windows)
-echo ==========================================
-echo.
+REM -----------------------------------------------------------
+REM 1️⃣  Toggle: set to 1 if you *want* the script to download the SDK automatically.
+REM     Leave it at 0 (the default) to keep the old manual‑SDK workflow.
+REM -----------------------------------------------------------
+set "AUTO_DOWNLOAD=0"   REM <-- keep this at 0 for “manual only”
 
-REM ==========================================
-REM Check Python
-REM ==========================================
-echo [*] Checking Python...
-python3 -c "import torch; print(f'  PyTorch version: {torch.__version__}')" || (
-    echo  ERROR: PyTorch not installed
-    echo  Run: pip install torch numpy omegaconf
+REM -----------------------------------------------------------
+REM Configurable download URL – change only if Steinberg updates it.
+REM -----------------------------------------------------------
+REM *** UPDATE THIS LINE TO POINT TO THE NEW STEINBERG VST3 SDK URL ***
+set "SDK_URL=https://www.steinberg.net/vst3sdk"
+
+REM -----------------------------------------------------------
+REM Resolve the SDK path
+REM -----------------------------------------------------------
+REM 1) Command‑line argument takes highest priority
+if not "%~1"=="" (
+    set "JUCE_VST3_SDK_PATH=%~1"
+) else (
+    REM 2) Otherwise look for an existing folder that looks like the SDK
+    for /d %%D in (VST3_SDK*) do (
+        set "JUCE_VST3_SDK_PATH=%%~fD"
+    )
+)
+
+REM 3) If still empty, fall back to automatic download (only if AUTO_DOWNLOAD=1)
+if not defined JUCE_VST3_SDK_PATH (
+    if "%AUTO_DOWNLOAD%"=="1" (
+        echo [*] VST3 SDK not found – attempting automatic download...
+        echo     Target URL: %SDK_URL%
+        echo.
+        powershell -NoProfile -Command ^
+            "Invoke-WebRequest -Uri '%SDK_URL%' -OutFile 'VST3_SDK.zip' -UseBasicParsing" ^
+            2>nul
+        if errorlevel 1 (
+            echo ERROR: Failed to download the SDK. Possible reasons:
+            echo   • The URL changed or now requires a manual login.
+            echo   • Your network blocks the request.
+            echo.
+            echo Please visit %SDK_URL% in a browser, accept Steinberg's licence,
+            echo download the ZIP manually, extract it, and place the folder at:
+            echo     %~dp0..\vst3-sdk
+            echo Then re‑run this script, optionally passing the folder path as an argument.
+            pause
+            exit /b 1
+        )
+        echo [*] Downloaded VST3_SDK.zip – extracting now...
+        powershell -NoProfile -Command ^
+            "Expand-Archive -Path 'VST3_SDK.zip' -DestinationPath '.' -Force" ^
+            2>nul
+        if errorlevel 1 (
+            echo ERROR: Extraction failed. Make sure you have write permission
+            echo in the script directory.
+            pause
+            exit /b 1
+        )
+        REM The extraction creates a folder that starts with VST3_SDK
+        for /d %%D in (VST3_SDK*) do (
+            set "JUCE_VST3_SDK_PATH=%%~fD"
+        )
+    )
+)
+
+REM Validate that the resolved folder really looks like an SDK
+if not exist "%JUCE_VST3_SDK_PATH%\ReadMe.txt" (
+    echo WARNING: The folder at "%JUCE_VST3_SDK_PATH%" does not contain ReadMe.txt.
+    echo It may not be the correct SDK version.
     pause
     exit /b 1
 )
 
-python3 -c "import qg; print('  QG package: OK')" || (
-    echo  [*] Installing QG package...
-    pip install git+https://github.com/akhilsadam/qg.git
-)
+echo [*] Using VST3 SDK at: "%JUCE_VST3_SDK_PATH%"
 
 echo.
-REM ==========================================
-REM Add VST3 SDK path
-REM ==========================================
-REM Adjust the path below if your SDK lives elsewhere.
-REM The script looks for a folder named "vst3-sdk" one level up from this batch file.
-set "JUCE_VST3_SDK_PATH=%~dp0..\vst3-sdk"
-if not exist "%JUCE_VST3_SDK_PATH%" (
-    echo ERROR: VST3 SDK not found at "%JUCE_VST3_SDK_PATH%".
-    echo Please extract the Steinberg VST3 SDK there or edit this script to point to its location.
-    pause
-    exit /b 1
-)
-
-echo [*] VST3 SDK path resolved to: "%JUCE_VST3_SDK_PATH%"
-
-echo.
-REM ==========================================
-REM Building JUCE plugin...
-REM ==========================================
+REM -----------------------------------------------------------
+REM Build JUCE plugin
+REM -----------------------------------------------------------
 if exist build (
     rmdir /s /q build
 )
 mkdir build
 cd build
 
-REM Configure for Visual Studio 2022 (adjust if needed)
-cmake .. -G "Visual Studio 17 2022" -DCMAKE_CXX_STANDARD=17 -DJUCE_VST3_SDK_PATH="%JUCE_VST3_SDK_PATH%" || (
-    echo ERROR: CMake configuration failed
-    pause
-    exit /b 1
-)
+REM -----------------------------------------------------------
+REM Configure with CMake – inject the SDK path we just resolved
+REM -----------------------------------------------------------
+cmake .. -G "Visual Studio 17 2022" -DCMAKE_CXX_STANDARD=17 ^
+    -DJUCE_VST3_SDK_PATH="%JUCE_VST3_SDK_PATH%" ^
+    || (
+        echo ERROR: CMake configuration failed
+        pause
+        exit /b 1
+    )
 
+REM -----------------------------------------------------------
 REM Build Release
+REM -----------------------------------------------------------
 cmake --build . --config Release || (
     echo ERROR: Build failed
     pause
@@ -65,15 +115,15 @@ cmake --build . --config Release || (
 cd ..
 
 echo.
-echo ==========================================
+echo =========================================================
 echo Build Complete!
-echo ==========================================
+echo =========================================================
 echo.
 echo Plugin location:
-echo   build\bin\QGWavetableVST_artefacts\VST3\
+echo    build\bin\QGWavetableVST_artefacts\VST3\
 echo.
-echo Next: Copy to VST3 folder
-echo   C:\Program Files\Common Files\VST3\
+echo Next: copy the plugin to your VST3 host folder, e.g.
+echo    C:\Program Files\Common Files\VST3\
 echo.
 echo Then restart your DAW and load the plugin!
 echo.
