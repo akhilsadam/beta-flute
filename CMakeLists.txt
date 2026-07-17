@@ -14,6 +14,9 @@ endif()
 # To add VST2 support, set this to your VST2 SDK path:
 # set(JUCE_VST2_SDK_LOCATION "C:/path/to/vst2sdk" CACHE PATH "VST2 SDK location" FORCE)
 
+set(JUCE_DISABLE_VST2 TRUE CACHE BOOL "Disable VST2 support"
+FORCE)
+
 # Fetch JUCE
 include(FetchContent)
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
@@ -33,9 +36,6 @@ elseif(APPLE)
 else()
     set(PLUGIN_FORMATS VST3)
 endif()
-
-set(JUCE_DISABLE_VST2 TRUE CACHE BOOL "Disable VST2 support"
-FORCE)
 
 # Create VST3/AU plugin
 juce_add_plugin(QGWavetableVST
