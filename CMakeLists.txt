@@ -12,12 +12,17 @@ endif()
 
 # Fetch JUCE
 include(FetchContent)
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
     GIT_TAG 7.0.12
+    GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(JUCE)
+
+# Add JUCE to the project
+add_subdirectory(${juce_SOURCE_DIR} ${CMAKE_BINARY_DIR}/JUCE)
 
 # Determine plugin format based on OS
 if(WIN32)
@@ -39,19 +44,18 @@ juce_add_plugin(QGWavetableVST
     AU_MAIN_TYPE "kAudioUnitType_MusicDevice"
 )
 
+# Add sources - do NOT include headers, only .cpp files
 target_sources(QGWavetableVST PRIVATE
     juce/QGWavetableProcessor.cpp
     juce/Main.cpp
-    juce/QGWavetable.h
-    juce/QGWavetableProcessor.h
-    juce/QGWavetableComponents.h
-    juce/QGWavetableEditor.h
 )
 
+# Include directories
 target_include_directories(QGWavetableVST PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/juce
 )
 
+# Link JUCE modules
 target_link_libraries(QGWavetableVST PRIVATE
     juce::juce_audio_utils
     juce::juce_core
@@ -66,3 +70,4 @@ target_link_libraries(QGWavetableVST PRIVATE
 set_target_properties(QGWavetableVST PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
+
