@@ -9,7 +9,10 @@ echo "=========================================="
 
 # Check Python
 echo "✓ Checking Python..."
-python3 -c "import torch; print(f'  PyTorch version: {torch.__version__}')"
+python3 -c "import torch; print(f'  PyTorch version: {torch.__version__}')" || {
+    echo "  ⚠ torch not installed, installing..."
+    pip install torch
+}
 python3 -c "import qg; print('  QG package: OK')" || {
     echo "  ⚠ QG not installed, installing..."
     pip install git+https://github.com/akhilsadam/qg.git
