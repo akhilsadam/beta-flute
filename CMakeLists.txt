@@ -10,14 +10,19 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
-# Disable VST2 support BEFORE fetching JUCE (requires Steinberg VST2 SDK)
-set(JUCE_PLUGINHOST_VST OFF CACHE BOOL "" FORCE)
-set(JUCE_VST2_LOCATION "" CACHE STRING "" FORCE)
-set(JUCE_BUILD_HELPER_TOOLS OFF CACHE BOOL "" FORCE)
-
-# Fetch JUCE
+# Fetch VST2 SDK (required for VST2 plugin format)
 include(FetchContent)
 set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+
+FetchContent_Declare(
+    VST2_SDK
+    URL https://github.com/steinbergmedia/vst2sdk/archive/refs/heads/master.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+)
+FetchContent_MakeAvailable(VST2_SDK)
+set(JUCE_VST2_SDK_LOCATION "${vst2_sdk_SOURCE_DIR}" CACHE PATH "VST2 SDK location" FORCE)
+
+# Fetch JUCE
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
@@ -28,11 +33,11 @@ FetchContent_MakeAvailable(JUCE)
 
 # Determine plugin format based on OS
 if(WIN32)
-    set(PLUGIN_FORMATS VST3)
+    set(PLUGIN_FORMATS VST VST3)
 elseif(APPLE)
     set(PLUGIN_FORMATS VST3 AU)
 else()
-    set(PLUGIN_FORMATS VST3)
+    set(PLUGIN_FORMATS VST VST3)
 endif()
 
 # Create VST3/AU plugin
