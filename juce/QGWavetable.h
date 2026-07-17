@@ -1,11 +1,20 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <cstring>
+#include <vector>
 #include <thread>
+#include <atomic>
+#include <cstring>
+
+#ifdef _WIN32
+    #include <winsock2.h>
+    #pragma comment(lib, "ws2_32.lib")
+    typedef int socklen_t;
+#else
+    #include <sys/socket.h>
+    #include <sys/un.h>
+    #include <unistd.h>
+#endif
 #include <cstdlib>
 #include <cstdio>
 
@@ -230,45 +239,91 @@ private:
             connected = true;
             readWaveforms();
             connected = false;
-            close(socketFd);
+            #ifdef _WIN32
+                closesocket(socketFd);
+            #else
+                close(socketFd);
+            #endif
             socketFd = -1;
         }
     }
 
     bool connectSocket()
     {
-        socketFd = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (socketFd < 0) return false;
+        #ifdef _WIN32
+            // Windows: use localhost TCP sockets
+            WSADATA wsa_data;
+            if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0)
+                return false;
 
-        struct sockaddr_un addr;
-        std::memset(&addr, 0, sizeof(addr));
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, WAVE_SOCKET_PATH, sizeof(addr.sun_path) - 1);
+            socketFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+            if (socketFd == INVALID_SOCKET)
+                return false;
 
-        if (connect(socketFd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
-        {
-            close(socketFd);
-            socketFd = -1;
-            return false;
-        }
+            struct sockaddr_in addr;
+            addr.sin_family = AF_INET;
+            addr.sin_port = htons(9999);
+            addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-        // Also connect to command socket
-        cmdSocketFd = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (cmdSocketFd >= 0)
-        {
-            struct sockaddr_un cmd_addr;
-            std::memset(&cmd_addr, 0, sizeof(cmd_addr));
-            cmd_addr.sun_family = AF_UNIX;
-            strncpy(cmd_addr.sun_path, CMD_SOCKET_PATH, sizeof(cmd_addr.sun_path) - 1);
-
-            if (connect(cmdSocketFd, (struct sockaddr*)&cmd_addr, sizeof(cmd_addr)) < 0)
+            if (connect(socketFd, (struct sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
             {
-                close(cmdSocketFd);
-                cmdSocketFd = -1;
+                closesocket(socketFd);
+                socketFd = INVALID_SOCKET;
+                return false;
             }
-        }
 
-        return true;
+            // Command socket
+            cmdSocketFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+            if (cmdSocketFd != INVALID_SOCKET)
+            {
+                struct sockaddr_in cmd_addr;
+                cmd_addr.sin_family = AF_INET;
+                cmd_addr.sin_port = htons(9998);
+                cmd_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+                if (connect(cmdSocketFd, (struct sockaddr*)&cmd_addr, sizeof(cmd_addr)) == SOCKET_ERROR)
+                {
+                    closesocket(cmdSocketFd);
+                    cmdSocketFd = INVALID_SOCKET;
+                }
+            }
+
+            return true;
+        #else
+            // Unix/Linux/macOS: use Unix sockets
+            socketFd = socket(AF_UNIX, SOCK_STREAM, 0);
+            if (socketFd < 0) return false;
+
+            struct sockaddr_un addr;
+            std::memset(&addr, 0, sizeof(addr));
+            addr.sun_family = AF_UNIX;
+            strncpy(addr.sun_path, WAVE_SOCKET_PATH, sizeof(addr.sun_path) - 1);
+
+            if (connect(socketFd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+            {
+                close(socketFd);
+                socketFd = -1;
+                return false;
+            }
+
+            // Also connect to command socket
+            cmdSocketFd = socket(AF_UNIX, SOCK_STREAM, 0);
+            if (cmdSocketFd >= 0)
+            {
+                struct sockaddr_un cmd_addr;
+                std::memset(&cmd_addr, 0, sizeof(cmd_addr));
+                cmd_addr.sun_family = AF_UNIX;
+                strncpy(cmd_addr.sun_path, CMD_SOCKET_PATH, sizeof(cmd_addr.sun_path) - 1);
+
+                if (connect(cmdSocketFd, (struct sockaddr*)&cmd_addr, sizeof(cmd_addr)) < 0)
+                {
+                    close(cmdSocketFd);
+                    cmdSocketFd = -1;
+                }
+            }
+
+            return true;
+        #endif
     }
 
     void readWaveforms()

@@ -197,25 +197,44 @@ class QGWavetableServer:
 
     def start_server(self, port=9999):
         """Start socket server with separate waveform and command channels."""
-        # Waveform socket
-        waveform_path = f'/tmp/qg_wavetable_wave_{port}.sock'
-        Path(waveform_path).unlink(missing_ok=True)
+        import platform
+        use_tcp = platform.system() == "Windows"
 
-        wave_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        wave_sock.bind(waveform_path)
-        wave_sock.listen(1)
+        if use_tcp:
+            # Windows: use TCP/IP
+            wave_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            wave_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            wave_sock.bind(("127.0.0.1", port))
+            wave_sock.listen(1)
 
-        # Command socket
-        cmd_path = f'/tmp/qg_wavetable_cmd_{port}.sock'
-        Path(cmd_path).unlink(missing_ok=True)
+            cmd_sock_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            cmd_sock_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            cmd_sock_server.bind(("127.0.0.1", port - 1))
+            cmd_sock_server.listen(1)
 
-        cmd_sock_server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        cmd_sock_server.bind(cmd_path)
-        cmd_sock_server.listen(1)
+            print(f"QG Wavetable Server listening on (TCP/Windows):")
+            print(f"  Waveforms: 127.0.0.1:{port}")
+            print(f"  Commands:  127.0.0.1:{port - 1}")
+        else:
+            # Unix/Linux/macOS: use Unix sockets
+            waveform_path = f'/tmp/qg_wavetable_wave_{port}.sock'
+            Path(waveform_path).unlink(missing_ok=True)
 
-        print(f"QG Wavetable Server listening on:")
-        print(f"  Waveforms: {waveform_path}")
-        print(f"  Commands:  {cmd_path}")
+            wave_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            wave_sock.bind(waveform_path)
+            wave_sock.listen(1)
+
+            # Command socket
+            cmd_path = f'/tmp/qg_wavetable_cmd_{port}.sock'
+            Path(cmd_path).unlink(missing_ok=True)
+
+            cmd_sock_server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            cmd_sock_server.bind(cmd_path)
+            cmd_sock_server.listen(1)
+
+            print(f"QG Wavetable Server listening on (Unix sockets):")
+            print(f"  Waveforms: {waveform_path}")
+            print(f"  Commands:  {cmd_path}")
 
         try:
             cmd_conn = None
@@ -245,8 +264,9 @@ class QGWavetableServer:
         finally:
             wave_sock.close()
             cmd_sock_server.close()
-            Path(waveform_path).unlink(missing_ok=True)
-            Path(cmd_path).unlink(missing_ok=True)
+            if not use_tcp:
+                Path(waveform_path).unlink(missing_ok=True)
+                Path(cmd_path).unlink(missing_ok=True)
 
 
 def main():

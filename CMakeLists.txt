@@ -4,6 +4,12 @@ project(QGWavetableVST VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Windows-specific settings
+if(MSVC)
+    add_compile_options(/MP)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+endif()
+
 # Fetch JUCE
 include(FetchContent)
 FetchContent_Declare(
@@ -13,13 +19,22 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
+# Determine plugin format based on OS
+if(WIN32)
+    set(PLUGIN_FORMATS VST3)
+elseif(APPLE)
+    set(PLUGIN_FORMATS VST3 AU)
+else()
+    set(PLUGIN_FORMATS VST3)
+endif()
+
 # Create VST3/AU plugin
 juce_add_plugin(QGWavetableVST
     PRODUCT_NAME "QG Wavetable"
     COMPANY_NAME "Akhil"
     PLUGIN_MANUFACTURER_CODE "AKHM"
     PLUGIN_CODE "QGWV"
-    FORMATS VST3 AU
+    FORMATS ${PLUGIN_FORMATS}
     VST3_CATEGORIES "Instrument" "Synth"
     AU_MAIN_TYPE "kAudioUnitType_MusicDevice"
 )
@@ -27,6 +42,10 @@ juce_add_plugin(QGWavetableVST
 target_sources(QGWavetableVST PRIVATE
     juce/QGWavetableProcessor.cpp
     juce/Main.cpp
+    juce/QGWavetable.h
+    juce/QGWavetableProcessor.h
+    juce/QGWavetableComponents.h
+    juce/QGWavetableEditor.h
 )
 
 target_include_directories(QGWavetableVST PRIVATE
@@ -35,6 +54,12 @@ target_include_directories(QGWavetableVST PRIVATE
 
 target_link_libraries(QGWavetableVST PRIVATE
     juce::juce_audio_utils
+    juce::juce_core
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_gui_basics
+    juce::juce_audio_processors
+    juce::juce_audio_basics
 )
 
 # Set binary output directory

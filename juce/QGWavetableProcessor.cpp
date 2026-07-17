@@ -1,6 +1,11 @@
 #include "QGWavetableProcessor.h"
 #include "QGWavetableEditor.h"
 
+#ifdef _WIN32
+    #include <winsock2.h>
+    #pragma comment(lib, "ws2_32.lib")
+#endif
+
 QGWavetableAudioProcessor::QGWavetableAudioProcessor()
     : AudioProcessor(BusesProperties()
         .withOutput("Output", juce::AudioChannelSet::stereo(), true))
