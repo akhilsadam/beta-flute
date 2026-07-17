@@ -23,15 +23,7 @@ echo "=========================================="
 # -------------------------------------------------------------------------------
 SDK_ZIP="VST3_SDK.zip"
 SDK_URL="https://www.steinberg.net/vst3sdk"
-VST_SDK_ROOT=""
-
-# Check if a known SDK folder already exists (e.g. VST3_SDK-*)
-for candidate in ../VST3_SDK*; do
-    if [[ -d "$candidate" && -f "$candidate/ReadMe.txt" ]]; then
-        VST_SDK_ROOT="$(realpath "$candidate")"
-        break
-    fi
-done
+VST_SDK_ROOT="VST_SDK"
 
 if [[ -z "$VST_SDK_ROOT" ]]; then
     echo "⚠ VST SDK not found locally."
