@@ -262,7 +262,11 @@ public:
         running = false;
         if (socketFd >= 0)
         {
-            close(socketFd);
+            #ifdef _WIN32
+                closesocket(socketFd);
+            #else
+                close(socketFd);
+            #endif
             socketFd = -1;
         }
         if (readerThread.joinable())
@@ -398,11 +402,15 @@ private:
             if (std::memcmp(magic, "QGWT", 4) != 0) break;
 
             uint32_t size;
-            if (recv(socketFd, &size, 4, 0) != 4) break;
+            char size_bytes[4];
+            if (recv(socketFd, size_bytes, 4, 0) != 4) break;
+            std::memcpy(&size, size_bytes, 4);
+
             if (size != QGWavetableBuffer::WAVEFORM_SIZE) break;
 
             int bytesToRead = size * sizeof(float);
-            if (recv(socketFd, waveform.data(), bytesToRead, 0) != bytesToRead)
+            char* waveform_bytes = reinterpret_cast<char*>(waveform.data());
+            if (recv(socketFd, waveform_bytes, bytesToRead, 0) != bytesToRead)
                 break;
 
             if (waveBuffer)
