@@ -21,6 +21,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
+# Disable VST2 support (requires additional SDK)
+set(JUCE_PLUGINHOST_VST OFF CACHE BOOL "" FORCE)
+set(JUCE_VST2_LOCATION "" CACHE STRING "" FORCE)
+
 # Determine plugin format based on OS
 if(WIN32)
     set(PLUGIN_FORMATS VST3)
